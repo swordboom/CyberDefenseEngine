@@ -1,4 +1,4 @@
-FROM rocm/pytorch:rocm6.1_ubuntu22.04_py3.10_pytorch_2.3.0
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
