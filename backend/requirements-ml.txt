@@ -1,0 +1,6 @@
+-r requirements.txt
+torch>=2.3,<3
+transformers>=4.42,<6
+accelerate>=1.1,<2
+onnxruntime>=1.18,<2
+onnxscript>=0.5,<1

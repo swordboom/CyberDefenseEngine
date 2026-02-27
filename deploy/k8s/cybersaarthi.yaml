@@ -1,0 +1,274 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cybersaarthi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cybersaarthi-config
+  namespace: cybersaarthi
+data:
+  SERVICE_MODE: "http"
+  ENABLE_DOCS: "false"
+  REDIS_URL: "redis://redis:6379/0"
+  DATABASE_URL: "postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi"
+  INFERENCE_SERVICE_URL: "http://inference:8001"
+  EXPLANATION_SERVICE_URL: "http://explanation:8002"
+  METRICS_SERVICE_URL: "http://metrics:8003"
+  AUTH_SERVICE_URL: "http://auth:8004"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cybersaarthi-secrets
+  namespace: cybersaarthi
+type: Opaque
+stringData:
+  JWT_SECRET: "replace-in-cluster"
+  HASH_SALT: "replace-in-cluster"
+  INTERNAL_SERVICE_TOKEN: "replace-in-cluster"
+  INSTITUTION_SEED_JSON: '{"demo-university":{"api_key":"replace-in-cluster","plan_type":"pro"}}'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: cybersaarthi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: ghcr.io/your-org/cybersaarthi:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: SERVICE_APP
+              value: backend.app.main:app
+            - name: PORT
+              value: "8000"
+            - name: WORKERS
+              value: "4"
+          envFrom:
+            - configMapRef:
+                name: cybersaarthi-config
+            - secretRef:
+                name: cybersaarthi-secrets
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: cybersaarthi
+spec:
+  selector:
+    app: gateway
+  ports:
+    - port: 80
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inference
+  namespace: cybersaarthi
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: inference
+  template:
+    metadata:
+      labels:
+        app: inference
+    spec:
+      containers:
+        - name: inference
+          image: ghcr.io/your-org/cybersaarthi:latest
+          ports:
+            - containerPort: 8001
+          env:
+            - name: SERVICE_APP
+              value: backend.app.inference_service:app
+            - name: PORT
+              value: "8001"
+            - name: WORKERS
+              value: "4"
+            - name: OMP_NUM_THREADS
+              value: "8"
+          envFrom:
+            - configMapRef:
+                name: cybersaarthi-config
+            - secretRef:
+                name: cybersaarthi-secrets
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8001
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference
+  namespace: cybersaarthi
+spec:
+  selector:
+    app: inference
+  ports:
+    - port: 8001
+      targetPort: 8001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: explanation
+  namespace: cybersaarthi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: explanation
+  template:
+    metadata:
+      labels:
+        app: explanation
+    spec:
+      containers:
+        - name: explanation
+          image: ghcr.io/your-org/cybersaarthi:latest
+          ports:
+            - containerPort: 8002
+          env:
+            - name: SERVICE_APP
+              value: backend.app.explanation_service:app
+            - name: PORT
+              value: "8002"
+            - name: WORKERS
+              value: "2"
+          envFrom:
+            - configMapRef:
+                name: cybersaarthi-config
+            - secretRef:
+                name: cybersaarthi-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: explanation
+  namespace: cybersaarthi
+spec:
+  selector:
+    app: explanation
+  ports:
+    - port: 8002
+      targetPort: 8002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics
+  namespace: cybersaarthi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: metrics
+  template:
+    metadata:
+      labels:
+        app: metrics
+    spec:
+      containers:
+        - name: metrics
+          image: ghcr.io/your-org/cybersaarthi:latest
+          ports:
+            - containerPort: 8003
+          env:
+            - name: SERVICE_APP
+              value: backend.app.metrics_service:app
+            - name: PORT
+              value: "8003"
+            - name: WORKERS
+              value: "2"
+          envFrom:
+            - configMapRef:
+                name: cybersaarthi-config
+            - secretRef:
+                name: cybersaarthi-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metrics
+  namespace: cybersaarthi
+spec:
+  selector:
+    app: metrics
+  ports:
+    - port: 8003
+      targetPort: 8003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: cybersaarthi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+        - name: auth
+          image: ghcr.io/your-org/cybersaarthi:latest
+          ports:
+            - containerPort: 8004
+          env:
+            - name: SERVICE_APP
+              value: backend.app.auth_service:app
+            - name: PORT
+              value: "8004"
+            - name: WORKERS
+              value: "2"
+          envFrom:
+            - configMapRef:
+                name: cybersaarthi-config
+            - secretRef:
+                name: cybersaarthi-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: cybersaarthi
+spec:
+  selector:
+    app: auth
+  ports:
+    - port: 8004
+      targetPort: 8004

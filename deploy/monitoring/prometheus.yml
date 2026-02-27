@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: gateway
+    static_configs:
+      - targets: ["gateway:8000"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: inference
+    static_configs:
+      - targets: ["inference:8001"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: explanation
+    static_configs:
+      - targets: ["explanation:8002"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: metrics
+    static_configs:
+      - targets: ["metrics:8003"]
+    metrics_path: /metrics/prometheus
+
+  - job_name: auth
+    static_configs:
+      - targets: ["auth:8004"]
+    metrics_path: /metrics/prometheus

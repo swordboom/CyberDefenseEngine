@@ -1,0 +1,153 @@
+version: "3.9"
+
+services:
+  gateway:
+    build: .
+    container_name: cybersaarthi-gateway
+    env_file:
+      - backend/.env
+    environment:
+      SERVICE_APP: backend.app.main:app
+      SERVICE_MODE: http
+      SERVICE_NAME: gateway
+      PORT: 8000
+      WORKERS: 4
+      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      REDIS_URL: redis://redis:6379/0
+      INFERENCE_SERVICE_URL: http://inference:8001
+      EXPLANATION_SERVICE_URL: http://explanation:8002
+      METRICS_SERVICE_URL: http://metrics:8003
+      AUTH_SERVICE_URL: http://auth:8004
+    volumes:
+      - ./backend/artifacts:/app/backend/artifacts
+    ports:
+      - "8000:8000"
+    depends_on:
+      - inference
+      - explanation
+      - metrics
+      - auth
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  inference:
+    build: .
+    container_name: cybersaarthi-inference
+    env_file:
+      - backend/.env
+    environment:
+      SERVICE_APP: backend.app.inference_service:app
+      SERVICE_NAME: inference
+      PORT: 8001
+      WORKERS: 4
+      OMP_NUM_THREADS: 8
+      SERVICE_MODE: http
+      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend/artifacts:/app/backend/artifacts
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  explanation:
+    build: .
+    container_name: cybersaarthi-explanation
+    env_file:
+      - backend/.env
+    environment:
+      SERVICE_APP: backend.app.explanation_service:app
+      SERVICE_NAME: explanation
+      PORT: 8002
+      WORKERS: 2
+      SERVICE_MODE: http
+      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  metrics:
+    build: .
+    container_name: cybersaarthi-metrics
+    env_file:
+      - backend/.env
+    environment:
+      SERVICE_APP: backend.app.metrics_service:app
+      SERVICE_NAME: metrics
+      PORT: 8003
+      WORKERS: 2
+      SERVICE_MODE: http
+      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  auth:
+    build: .
+    container_name: cybersaarthi-auth
+    env_file:
+      - backend/.env
+    environment:
+      SERVICE_APP: backend.app.auth_service:app
+      SERVICE_NAME: auth
+      PORT: 8004
+      WORKERS: 2
+      SERVICE_MODE: http
+      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cybersaarthi-postgres
+    environment:
+      POSTGRES_DB: cybersaarthi
+      POSTGRES_USER: cybersaarthi
+      POSTGRES_PASSWORD: cybersaarthi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: cybersaarthi-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: cybersaarthi-prometheus
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - gateway
+      - inference
+      - explanation
+      - metrics
+      - auth
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: cybersaarthi-grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

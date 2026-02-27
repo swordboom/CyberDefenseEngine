@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyberSaarthi</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <h1>CyberSaarthi</h1>
+        <p>Simple phishing analysis dashboard</p>
+      </header>
+
+      <section class="card">
+        <h2>Analyze Message</h2>
+        <form id="analyze-form">
+          <label for="api-base">API base URL</label>
+          <input id="api-base" type="url" value="http://127.0.0.1:8000" required />
+
+          <label for="message-text">Message text</label>
+          <textarea
+            id="message-text"
+            rows="4"
+            placeholder="Optional: message body for deeper context"
+          ></textarea>
+
+          <label for="message-url">URL</label>
+          <input
+            id="message-url"
+            type="url"
+            placeholder="https://example.com/path"
+            required
+          />
+
+          <label for="api-key">Institution API key</label>
+          <input id="api-key" type="text" placeholder="Required in production mode" />
+
+          <button type="submit">Run Analysis</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Result</h2>
+        <div id="status" class="status status-idle">Ready</div>
+        <div class="result-grid">
+          <div><span class="label">Risk score:</span> <span id="risk-score">-</span></div>
+          <div><span class="label">Prediction:</span> <span id="prediction">-</span></div>
+          <div><span class="label">Hashed ID:</span> <span id="hashed-id">-</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Explanation</h2>
+        <pre id="explanation" class="code-block">-</pre>
+      </section>
+
+      <section class="card">
+        <h2>Metrics</h2>
+        <button id="refresh-metrics" type="button">Refresh Metrics</button>
+        <pre id="metrics" class="code-block">-</pre>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
