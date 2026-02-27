@@ -27,4 +27,4 @@ ENV SERVICE_APP=backend.app.main:app \
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
 
-CMD ["bash", "-lc", "gunicorn ${SERVICE_APP} -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT} --workers ${WORKERS} --worker-tmp-dir /dev/shm --timeout 60 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -"]
+CMD ["bash", "-lc", "gunicorn ${SERVICE_APP} -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT} --workers 1 --worker-tmp-dir /dev/shm --timeout 120 --graceful-timeout 30 --keep-alive 5 --access-logfile - --error-logfile -"]
