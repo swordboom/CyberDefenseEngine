@@ -243,9 +243,9 @@ function renderDemoMetrics() {
 }
 
 function setDemoModeUi(enabled) {
-  apiBaseInput.disabled = enabled;
-  apiKeyInput.disabled = enabled;
-  refreshMetricsButton.textContent = enabled ? "Refresh Demo Metrics" : "Refresh Metrics";
+  apiBaseInput.disabled = false;
+  apiKeyInput.disabled = false;
+  refreshMetricsButton.textContent = enabled ? "Refresh Demo Metrics/API" : "Refresh Metrics";
   localStorage.setItem(DEMO_MODE_KEY, enabled ? "1" : "0");
   if (enabled) {
     renderDemoMetrics();
@@ -278,7 +278,27 @@ form.addEventListener("submit", async (event) => {
   explanationNode.textContent = "-";
 
   if (demoMode) {
+    const payload = { text, url };
     try {
+      if (apiBase) {
+        const token = await ensureToken(apiBase, apiKey, "admin").catch(() => "");
+        const headers = buildHeaders(apiKey, token);
+        const [analyzeData, explainData] = await Promise.all([
+          postJson("/analyze", apiBase, payload, headers),
+          postJson("/explain", apiBase, payload, headers),
+        ]);
+        setResult(analyzeData);
+        explanationNode.textContent = JSON.stringify(explainData, null, 2);
+        try {
+          const metricsData = await getJson("/metrics", apiBase, headers);
+          metricsNode.textContent = JSON.stringify(metricsData, null, 2);
+        } catch (metricsError) {
+          metricsNode.textContent = `Demo API metrics unavailable: ${String(metricsError.message || metricsError)}`;
+        }
+        setStatus("Demo analysis complete (using API base)", "status-ok");
+        return;
+      }
+
       const startedAt = performance.now();
       const riskScore = scoreLocalRisk(text, url);
       const riskBucket = toRiskBucket(riskScore);
@@ -296,10 +316,26 @@ form.addEventListener("submit", async (event) => {
       explanationNode.textContent = JSON.stringify(explainData, null, 2);
       updateDemoMetrics(riskScore, riskBucket);
       renderDemoMetrics();
-      setStatus("Demo analysis complete (API-free)", "status-ok");
+      setStatus("Demo analysis complete (local)", "status-ok");
     } catch (error) {
-      setStatus("Demo mode failed", "status-error");
-      explanationNode.textContent = String(error.message || error);
+      const startedAt = performance.now();
+      const riskScore = scoreLocalRisk(text, url);
+      const riskBucket = toRiskBucket(riskScore);
+      const hashedId = await sha256Hex(`${text}|${url}|demo`);
+      const analyzeData = {
+        risk_score: riskScore,
+        prediction: riskScore >= 0.5 ? "phishing" : "benign",
+        risk_bucket: riskBucket,
+        inference_latency_ms: Number((performance.now() - startedAt).toFixed(3)),
+        model_backend: "heuristic",
+        hashed_id: hashedId,
+      };
+      const explainData = buildLocalExplanation(text, url, riskScore);
+      setResult(analyzeData);
+      explanationNode.textContent = JSON.stringify(explainData, null, 2);
+      updateDemoMetrics(riskScore, riskBucket);
+      renderDemoMetrics();
+      setStatus("Demo API failed, switched to local mode", "status-ok");
     }
     return;
   }
@@ -332,6 +368,19 @@ form.addEventListener("submit", async (event) => {
 refreshMetricsButton.addEventListener("click", async () => {
   const { apiBase, apiKey, demoMode } = readForm();
   if (demoMode) {
+    if (apiBase) {
+      try {
+        const token = await ensureToken(apiBase, apiKey, "admin").catch(() => "");
+        const metricsData = await getJson("/metrics", apiBase, buildHeaders(apiKey, token));
+        metricsNode.textContent = JSON.stringify(metricsData, null, 2);
+        setStatus("Demo metrics updated from API", "status-ok");
+        return;
+      } catch (error) {
+        renderDemoMetrics();
+        setStatus("Demo API metrics unavailable, showing local metrics", "status-ok");
+        return;
+      }
+    }
     renderDemoMetrics();
     setStatus("Demo metrics updated", "status-ok");
     return;
