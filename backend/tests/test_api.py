@@ -6,7 +6,7 @@ from app.main import create_app
 
 def _make_client(tmp_path, **overrides) -> TestClient:
     config = Settings(
-        database_url=f"sqlite:///{tmp_path / 'cybersaarthi.db'}",
+        database_url=f"sqlite:///{tmp_path / 'cyberdefenseengine.db'}",
         service_mode="inprocess",
         force_heuristic=True,
         enable_docs=True,
@@ -119,3 +119,21 @@ def test_metrics_requires_admin_role(tmp_path):
         token = token_response.json()["access_token"]
         response = client.get("/metrics", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 403
+
+
+def test_runtime_mode_endpoint(tmp_path):
+    with _make_client(tmp_path, demo_mode=True, require_api_key=False) as client:
+        response = client.get("/mode")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["demo_mode"] is True
+    assert payload["api_key_required"] is False
+    assert payload["force_heuristic"] is True
+
+
+def test_demo_mode_metrics_without_admin_token(tmp_path):
+    with _make_client(tmp_path, demo_mode=True, require_api_key=False) as client:
+        analyze = client.post("/analyze", json={"text": "verify now", "url": "http://example.com/login"})
+        metrics = client.get("/metrics")
+    assert analyze.status_code == 200
+    assert metrics.status_code == 200

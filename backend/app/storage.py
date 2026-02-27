@@ -110,7 +110,7 @@ def seed_institutions(db: Session, *, seeds: dict[str, dict[str, str]], hash_sal
         if existing is not None:
             continue
         institution = Institution(
-            id=str(uuid.uuid5(uuid.NAMESPACE_DNS, f"cybersaarthi:{name}")),
+            id=str(uuid.uuid5(uuid.NAMESPACE_DNS, f"cyberdefenseengine:{name}")),
             name=name,
             api_key_hash=hash_api_key(api_key, hash_salt),
             plan_type=plan_type,

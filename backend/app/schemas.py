@@ -138,3 +138,10 @@ class MetricsResponse(BaseModel):
 class BlacklistResponse(BaseModel):
     domains: list[str]
     updated_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
+
+
+class RuntimeModeResponse(BaseModel):
+    demo_mode: bool
+    api_key_required: bool
+    service_mode: Literal["inprocess", "http"]
+    force_heuristic: bool

@@ -24,6 +24,7 @@ from .schemas import (
     InferenceResponse,
     MetricsResponse,
     MetricsSummaryResponse,
+    RuntimeModeResponse,
     TokenRequest,
     TokenResponse,
 )
@@ -238,11 +239,25 @@ def create_gateway_app(config: Settings | None = None) -> FastAPI:
 
     @app.get("/healthz")
     def healthz():
-        return {"status": "ok", "service": "gateway", "mode": settings.service_mode}
+        return {
+            "status": "ok",
+            "service": "gateway",
+            "mode": settings.service_mode,
+            "demo_mode": settings.demo_mode,
+        }
 
     @app.get("/readyz")
     def readyz():
         return {"ready": True, "mode": settings.service_mode}
+
+    @app.get("/mode", response_model=RuntimeModeResponse)
+    def mode():
+        return RuntimeModeResponse(
+            demo_mode=settings.demo_mode,
+            api_key_required=settings.require_api_key,
+            service_mode=settings.service_mode,  # type: ignore[arg-type]
+            force_heuristic=settings.force_heuristic,
+        )
 
     @app.post("/auth/token", response_model=TokenResponse)
     def issue_token(
@@ -333,7 +348,7 @@ def create_gateway_app(config: Settings | None = None) -> FastAPI:
 
     @app.get("/metrics", response_model=MetricsResponse)
     def metrics(since_hours: int = 24 * 7, ctx: GatewayContext = Depends(resolve_context)):
-        if ctx.role != "admin":
+        if not settings.demo_mode and ctx.role != "admin":
             raise HTTPException(status_code=403, detail="Admin role required")
         if settings.service_mode == "inprocess":
             summary = app.state.metrics_manager.get_summary(institution_id=ctx.institution_id, since_hours=since_hours)

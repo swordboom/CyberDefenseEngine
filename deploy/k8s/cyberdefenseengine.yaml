@@ -1,18 +1,18 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: cybersaarthi
+  name: cyberdefenseengine
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cybersaarthi-config
-  namespace: cybersaarthi
+  name: cyberdefenseengine-config
+  namespace: cyberdefenseengine
 data:
   SERVICE_MODE: "http"
   ENABLE_DOCS: "false"
   REDIS_URL: "redis://redis:6379/0"
-  DATABASE_URL: "postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi"
+  DATABASE_URL: "postgresql+psycopg://cyberdefenseengine:cyberdefenseengine@postgres:5432/cyberdefenseengine"
   INFERENCE_SERVICE_URL: "http://inference:8001"
   EXPLANATION_SERVICE_URL: "http://explanation:8002"
   METRICS_SERVICE_URL: "http://metrics:8003"
@@ -21,8 +21,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: cybersaarthi-secrets
-  namespace: cybersaarthi
+  name: cyberdefenseengine-secrets
+  namespace: cyberdefenseengine
 type: Opaque
 stringData:
   JWT_SECRET: "replace-in-cluster"
@@ -34,7 +34,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gateway
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   replicas: 2
   selector:
@@ -47,7 +47,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: ghcr.io/your-org/cybersaarthi:latest
+          image: ghcr.io/your-org/cyberdefenseengine:latest
           ports:
             - containerPort: 8000
           env:
@@ -59,9 +59,9 @@ spec:
               value: "4"
           envFrom:
             - configMapRef:
-                name: cybersaarthi-config
+                name: cyberdefenseengine-config
             - secretRef:
-                name: cybersaarthi-secrets
+                name: cyberdefenseengine-secrets
           readinessProbe:
             httpGet:
               path: /readyz
@@ -75,7 +75,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gateway
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   selector:
     app: gateway
@@ -87,7 +87,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: inference
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   replicas: 3
   selector:
@@ -100,7 +100,7 @@ spec:
     spec:
       containers:
         - name: inference
-          image: ghcr.io/your-org/cybersaarthi:latest
+          image: ghcr.io/your-org/cyberdefenseengine:latest
           ports:
             - containerPort: 8001
           env:
@@ -114,9 +114,9 @@ spec:
               value: "8"
           envFrom:
             - configMapRef:
-                name: cybersaarthi-config
+                name: cyberdefenseengine-config
             - secretRef:
-                name: cybersaarthi-secrets
+                name: cyberdefenseengine-secrets
           readinessProbe:
             httpGet:
               path: /readyz
@@ -130,7 +130,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: inference
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   selector:
     app: inference
@@ -142,7 +142,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: explanation
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   replicas: 2
   selector:
@@ -155,7 +155,7 @@ spec:
     spec:
       containers:
         - name: explanation
-          image: ghcr.io/your-org/cybersaarthi:latest
+          image: ghcr.io/your-org/cyberdefenseengine:latest
           ports:
             - containerPort: 8002
           env:
@@ -167,15 +167,15 @@ spec:
               value: "2"
           envFrom:
             - configMapRef:
-                name: cybersaarthi-config
+                name: cyberdefenseengine-config
             - secretRef:
-                name: cybersaarthi-secrets
+                name: cyberdefenseengine-secrets
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: explanation
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   selector:
     app: explanation
@@ -187,7 +187,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: metrics
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   replicas: 2
   selector:
@@ -200,7 +200,7 @@ spec:
     spec:
       containers:
         - name: metrics
-          image: ghcr.io/your-org/cybersaarthi:latest
+          image: ghcr.io/your-org/cyberdefenseengine:latest
           ports:
             - containerPort: 8003
           env:
@@ -212,15 +212,15 @@ spec:
               value: "2"
           envFrom:
             - configMapRef:
-                name: cybersaarthi-config
+                name: cyberdefenseengine-config
             - secretRef:
-                name: cybersaarthi-secrets
+                name: cyberdefenseengine-secrets
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: metrics
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   selector:
     app: metrics
@@ -232,7 +232,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: auth
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   replicas: 2
   selector:
@@ -245,7 +245,7 @@ spec:
     spec:
       containers:
         - name: auth
-          image: ghcr.io/your-org/cybersaarthi:latest
+          image: ghcr.io/your-org/cyberdefenseengine:latest
           ports:
             - containerPort: 8004
           env:
@@ -257,15 +257,15 @@ spec:
               value: "2"
           envFrom:
             - configMapRef:
-                name: cybersaarthi-config
+                name: cyberdefenseengine-config
             - secretRef:
-                name: cybersaarthi-secrets
+                name: cyberdefenseengine-secrets
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: auth
-  namespace: cybersaarthi
+  namespace: cyberdefenseengine
 spec:
   selector:
     app: auth

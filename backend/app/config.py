@@ -2,7 +2,7 @@ import json
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "CyberSaarthi Gateway"
+    app_name: str = "CyberDefenseEngine Gateway"
     app_version: str = "2.0.0"
     app_env: str = "development"
     log_level: str = "INFO"
@@ -34,14 +34,15 @@ class Settings(BaseSettings):
     onnx_inter_op_threads: int = Field(default=0, ge=0, le=256)
     onnx_providers: list[str] = Field(default_factory=lambda: ["CPUExecutionProvider"])
     force_heuristic: bool = False
+    demo_mode: bool = False
 
     risk_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     high_risk_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
-    hash_salt: str = "cybersaarthi-change-me"
+    hash_salt: str = "cyberdefenseengine-change-me"
     text_max_length: int = Field(default=4096, ge=1, le=32768)
     url_max_length: int = Field(default=2048, ge=8, le=4096)
 
-    database_url: str = "sqlite:///./artifacts/cybersaarthi.db"
+    database_url: str = "sqlite:///./artifacts/cyberdefenseengine.db"
     redis_url: str = "redis://localhost:6379/0"
     redis_enabled: bool = True
     rate_limit_per_minute: int = Field(default=120, ge=1, le=50000)
@@ -154,6 +155,21 @@ class Settings(BaseSettings):
                 raise ValueError("institution_seed_json must be a JSON object")
             return cls._parse_seed_json(loaded)
         raise ValueError("institution_seed_json must be a dict or JSON object string")
+
+    @model_validator(mode="after")
+    def _apply_demo_mode_defaults(self) -> "Settings":
+        if not self.demo_mode:
+            return self
+        self.require_api_key = False
+        self.force_heuristic = True
+        seed_name = (self.default_institution_name or "demo-university").strip() or "demo-university"
+        seeds = dict(self.institution_seed_json)
+        seed_value = seeds.get(seed_name, {})
+        api_key = str(seed_value.get("api_key", "")).strip() if isinstance(seed_value, dict) else ""
+        if not api_key:
+            seeds[seed_name] = {"api_key": "demo-mode-key", "plan_type": "free"}
+        self.institution_seed_json = seeds
+        return self
 
 
 @lru_cache(maxsize=1)

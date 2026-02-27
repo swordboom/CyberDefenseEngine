@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CyberSaarthi</title>
+    <title>CyberDefenseEngine</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="app">
       <header class="app-header">
-        <h1>CyberSaarthi</h1>
+        <h1>CyberDefenseEngine</h1>
         <p>Simple phishing analysis dashboard</p>
       </header>
 
@@ -36,6 +36,14 @@
 
           <label for="api-key">Institution API key</label>
           <input id="api-key" type="text" placeholder="Required in production mode" />
+
+          <label class="toggle-row" for="demo-mode">
+            <input id="demo-mode" type="checkbox" checked />
+            <span>Demo mode (API-free local scoring)</span>
+          </label>
+          <p class="hint">
+            Demo mode runs directly in the browser with local heuristics and local metrics.
+          </p>
 
           <button type="submit">Run Analysis</button>
         </form>

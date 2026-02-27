@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CyberSaarthi",
+  "name": "CyberDefenseEngine",
   "version": "2.0.0",
   "action": {
     "default_popup": "popup.html"

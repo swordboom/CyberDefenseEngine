@@ -1,6 +1,6 @@
-# CyberSaarthi
+# CyberDefenseEngine
 
-CyberSaarthi is now structured as a privacy-first microservice platform for phishing detection:
+CyberDefenseEngine is now structured as a privacy-first microservice platform for phishing detection:
 
 - `gateway` (API Gateway + orchestration)
 - `inference` (ONNX/Torch/heuristic risk scoring)
@@ -77,9 +77,39 @@ API endpoints:
 - `POST /explain`
 - `GET /metrics` (requires admin JWT role)
 - `GET /blacklist`
+- `GET /mode`
 - `GET /healthz`
 - `GET /readyz`
 - `GET /metrics/prometheus`
+
+## Demo Mode (API-Free)
+
+Use demo mode for local, API-free operation with heuristic scoring and no API-key requirement.
+
+1. In `backend/.env`, set:
+
+```bash
+DEMO_MODE=true
+REQUIRE_API_KEY=false
+FORCE_HEURISTIC=true
+```
+
+2. Start backend:
+
+```bash
+cd backend
+uvicorn app.main:app --reload
+```
+
+3. Frontend:
+
+- Enable `Demo mode (API-free local scoring)` in the dashboard.
+- Demo mode runs analysis, explanation, and metrics directly in browser storage (no backend calls).
+
+4. Chrome extension:
+
+- Enable `Demo mode (API-free local scan)` in the popup.
+- Extension will skip backend calls and use local heuristics.
 
 ## Production Deployment (microservices)
 

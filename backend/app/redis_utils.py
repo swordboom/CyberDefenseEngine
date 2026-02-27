@@ -36,7 +36,7 @@ class RateLimiter:
     def allow(self, key: str) -> bool:
         if self.redis is not None:
             minute_slot = int(time.time() // 60)
-            redis_key = f"cybersaarthi:rl:{key}:{minute_slot}"
+            redis_key = f"cyberdefenseengine:rl:{key}:{minute_slot}"
             count = self.redis.incr(redis_key)
             if count == 1:
                 self.redis.expire(redis_key, 65)

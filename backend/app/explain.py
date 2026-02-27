@@ -5,14 +5,14 @@ from .privacy import stable_message_fingerprint
 
 
 class Explainer:
-    def __init__(self, cache_store=None, cache_ttl_seconds: int = 3600, hash_salt: str = "cybersaarthi"):
+    def __init__(self, cache_store=None, cache_ttl_seconds: int = 3600, hash_salt: str = "cyberdefenseengine"):
         self.cache = cache_store
         self.cache_ttl_seconds = cache_ttl_seconds
         self.hash_salt = hash_salt
 
     def _cache_key(self, text: str, url: str, risk_score: float) -> str:
         fingerprint = stable_message_fingerprint(text=text, url=url, hash_salt=self.hash_salt)
-        return f"cybersaarthi:explain:{fingerprint}:{round(risk_score, 3)}"
+        return f"cyberdefenseengine:explain:{fingerprint}:{round(risk_score, 3)}"
 
     def explain(self, text: str, url: str, risk_score: float) -> dict:
         cache_key = self._cache_key(text=text, url=url, risk_score=risk_score)

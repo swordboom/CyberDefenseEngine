@@ -98,13 +98,13 @@ async function analyzeWithBackend({ url, apiBase, apiKey }) {
     risk_score: payload.risk_score,
     prediction: payload.prediction,
     risk_bucket: payload.risk_bucket,
-    summary: "Scored by CyberSaarthi backend.",
+    summary: "Scored by CyberDefenseEngine backend.",
     mode: "backend",
   };
 }
 
 async function scanUrl(payload) {
-  const { url, apiBase, apiKey } = payload;
+  const { url, apiBase, apiKey, demoMode } = payload;
   const hostname = parseHostname(url);
   if (!hostname) {
     return {
@@ -119,8 +119,11 @@ async function scanUrl(payload) {
   await chrome.storage.local.set({
     api_base: apiBase,
     api_key: apiKey,
+    demo_mode: Boolean(demoMode),
   });
-  await syncBlacklist(apiBase, apiKey);
+  if (!demoMode) {
+    await syncBlacklist(apiBase, apiKey);
+  }
 
   const blacklist = await getCachedBlacklist();
   if (blacklist.includes(hostname)) {
@@ -130,6 +133,15 @@ async function scanUrl(payload) {
       risk_bucket: "critical",
       summary: "Domain is present in locally cached blacklist.",
       mode: "blacklist-cache",
+    };
+  }
+
+  if (demoMode) {
+    const result = localHeuristic(url);
+    return {
+      ...result,
+      summary: "Demo mode local heuristic scan (backend disabled).",
+      mode: "demo-local",
     };
   }
 
@@ -146,7 +158,8 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== SYNC_ALARM) return;
-  const config = await chrome.storage.local.get(["api_base", "api_key"]);
+  const config = await chrome.storage.local.get(["api_base", "api_key", "demo_mode"]);
+  if (config.demo_mode === true) return;
   const apiBase = config.api_base || "http://127.0.0.1:8000";
   const apiKey = config.api_key || "";
   await syncBlacklist(apiBase, apiKey);

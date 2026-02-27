@@ -14,7 +14,7 @@ def run_single_request(client: httpx.Client, base_url: str, payload: dict, heade
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="CyberSaarthi /analyze load benchmark")
+    parser = argparse.ArgumentParser(description="CyberDefenseEngine /analyze load benchmark")
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--requests", type=int, default=200)
     parser.add_argument("--concurrency", type=int, default=20)

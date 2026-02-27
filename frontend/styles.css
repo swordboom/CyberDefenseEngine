@@ -64,6 +64,24 @@ label {
   color: #334155;
 }
 
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.toggle-row input {
+  width: auto;
+  margin: 0;
+}
+
+.hint {
+  margin: 0 0 4px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
 input,
 textarea,
 button {
@@ -72,6 +90,11 @@ button {
   border: 1px solid var(--line);
   padding: 10px;
   font: inherit;
+}
+
+input:disabled {
+  background: #eef2f9;
+  color: #7b8595;
 }
 
 input:focus,

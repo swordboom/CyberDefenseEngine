@@ -3,7 +3,7 @@ version: "3.9"
 services:
   gateway:
     build: .
-    container_name: cybersaarthi-gateway
+    container_name: cyberdefenseengine-gateway
     env_file:
       - backend/.env
     environment:
@@ -12,7 +12,7 @@ services:
       SERVICE_NAME: gateway
       PORT: 8000
       WORKERS: 4
-      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      DATABASE_URL: postgresql+psycopg://cyberdefenseengine:cyberdefenseengine@postgres:5432/cyberdefenseengine
       REDIS_URL: redis://redis:6379/0
       INFERENCE_SERVICE_URL: http://inference:8001
       EXPLANATION_SERVICE_URL: http://explanation:8002
@@ -33,7 +33,7 @@ services:
 
   inference:
     build: .
-    container_name: cybersaarthi-inference
+    container_name: cyberdefenseengine-inference
     env_file:
       - backend/.env
     environment:
@@ -43,7 +43,7 @@ services:
       WORKERS: 4
       OMP_NUM_THREADS: 8
       SERVICE_MODE: http
-      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      DATABASE_URL: postgresql+psycopg://cyberdefenseengine:cyberdefenseengine@postgres:5432/cyberdefenseengine
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ./backend/artifacts:/app/backend/artifacts
@@ -54,7 +54,7 @@ services:
 
   explanation:
     build: .
-    container_name: cybersaarthi-explanation
+    container_name: cyberdefenseengine-explanation
     env_file:
       - backend/.env
     environment:
@@ -63,7 +63,7 @@ services:
       PORT: 8002
       WORKERS: 2
       SERVICE_MODE: http
-      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      DATABASE_URL: postgresql+psycopg://cyberdefenseengine:cyberdefenseengine@postgres:5432/cyberdefenseengine
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - redis
@@ -71,7 +71,7 @@ services:
 
   metrics:
     build: .
-    container_name: cybersaarthi-metrics
+    container_name: cyberdefenseengine-metrics
     env_file:
       - backend/.env
     environment:
@@ -80,7 +80,7 @@ services:
       PORT: 8003
       WORKERS: 2
       SERVICE_MODE: http
-      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      DATABASE_URL: postgresql+psycopg://cyberdefenseengine:cyberdefenseengine@postgres:5432/cyberdefenseengine
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - postgres
@@ -88,7 +88,7 @@ services:
 
   auth:
     build: .
-    container_name: cybersaarthi-auth
+    container_name: cyberdefenseengine-auth
     env_file:
       - backend/.env
     environment:
@@ -97,7 +97,7 @@ services:
       PORT: 8004
       WORKERS: 2
       SERVICE_MODE: http
-      DATABASE_URL: postgresql+psycopg://cybersaarthi:cybersaarthi@postgres:5432/cybersaarthi
+      DATABASE_URL: postgresql+psycopg://cyberdefenseengine:cyberdefenseengine@postgres:5432/cyberdefenseengine
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - postgres
@@ -105,11 +105,11 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: cybersaarthi-postgres
+    container_name: cyberdefenseengine-postgres
     environment:
-      POSTGRES_DB: cybersaarthi
-      POSTGRES_USER: cybersaarthi
-      POSTGRES_PASSWORD: cybersaarthi
+      POSTGRES_DB: cyberdefenseengine
+      POSTGRES_USER: cyberdefenseengine
+      POSTGRES_PASSWORD: cyberdefenseengine
     ports:
       - "5432:5432"
     volumes:
@@ -118,14 +118,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: cybersaarthi-redis
+    container_name: cyberdefenseengine-redis
     ports:
       - "6379:6379"
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v2.54.1
-    container_name: cybersaarthi-prometheus
+    container_name: cyberdefenseengine-prometheus
     volumes:
       - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
@@ -142,7 +142,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.2.2
-    container_name: cybersaarthi-grafana
+    container_name: cyberdefenseengine-grafana
     ports:
       - "3001:3000"
     depends_on:

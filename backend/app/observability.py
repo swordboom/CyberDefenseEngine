@@ -4,12 +4,12 @@ from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 REQUEST_COUNT = Counter(
-    "cybersaarthi_http_requests_total",
+    "cyberdefenseengine_http_requests_total",
     "HTTP requests served",
     ["service", "method", "path", "status_code"],
 )
 REQUEST_LATENCY = Histogram(
-    "cybersaarthi_http_request_duration_seconds",
+    "cyberdefenseengine_http_request_duration_seconds",
     "HTTP latency seconds",
     ["service", "path"],
 )
