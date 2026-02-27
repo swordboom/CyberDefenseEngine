@@ -5,16 +5,19 @@ from app.main import create_app
 
 
 def _make_client(tmp_path, **overrides) -> TestClient:
-    config = Settings(
-        database_url=f"sqlite:///{tmp_path / 'cyberdefenseengine.db'}",
-        service_mode="inprocess",
-        force_heuristic=True,
-        enable_docs=True,
-        enable_gzip=False,
-        trusted_hosts=["testserver", "localhost", "127.0.0.1"],
-        cors_allow_origins=["http://localhost:3000"],
-        **overrides,
-    )
+    base = {
+        "_env_file": None,
+        "database_url": f"sqlite:///{tmp_path / 'cyberdefenseengine.db'}",
+        "service_mode": "inprocess",
+        "force_heuristic": True,
+        "require_api_key": False,
+        "enable_docs": True,
+        "enable_gzip": False,
+        "trusted_hosts": ["testserver", "localhost", "127.0.0.1"],
+        "cors_allow_origins": ["http://localhost:3000"],
+    }
+    base.update(overrides)
+    config = Settings(**base)
     return TestClient(create_app(config))
 
 
@@ -137,3 +140,23 @@ def test_demo_mode_metrics_without_admin_token(tmp_path):
         metrics = client.get("/metrics")
     assert analyze.status_code == 200
     assert metrics.status_code == 200
+
+
+def test_docs_endpoint_uses_docs_csp(tmp_path):
+    with _make_client(tmp_path) as client:
+        docs = client.get("/docs")
+        health = client.get("/healthz")
+    assert docs.status_code == 200
+    docs_csp = docs.headers.get("Content-Security-Policy", "")
+    health_csp = health.headers.get("Content-Security-Policy", "")
+    assert "cdn.jsdelivr.net" in docs_csp
+    assert health_csp == "default-src 'none'; frame-ancestors 'none';"
+
+
+def test_demo_mode_forces_single_service_and_open_origin_defaults():
+    cfg = Settings(_env_file=None, demo_mode=True)
+    assert cfg.service_mode == "inprocess"
+    assert cfg.require_api_key is False
+    assert cfg.force_heuristic is True
+    assert cfg.cors_allow_origins == ["*"]
+    assert cfg.trusted_hosts == ["*"]

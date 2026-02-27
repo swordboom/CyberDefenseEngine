@@ -104,12 +104,30 @@ uvicorn app.main:app --reload
 3. Frontend:
 
 - Enable `Demo mode (API-free local scoring)` in the dashboard.
-- Demo mode runs analysis, explanation, and metrics directly in browser storage (no backend calls).
+- Demo mode can call your API base when provided, and falls back to local browser heuristics/metrics when API is unavailable.
 
 4. Chrome extension:
 
 - Enable `Demo mode (API-free local scan)` in the popup.
 - Extension will skip backend calls and use local heuristics.
+
+## Vercel + Render Demo Deploy
+
+For a single Render backend service + Vercel frontend, use these backend env values:
+
+- `DEMO_MODE=true`
+- `ENABLE_DOCS=true` (if you want `/docs`)
+
+Notes:
+
+- `DEMO_MODE=true` automatically forces:
+  - `SERVICE_MODE=inprocess`
+  - `REQUIRE_API_KEY=false`
+  - `FORCE_HEURISTIC=true`
+  - `CORS_ALLOW_ORIGINS=["*"]`
+  - `TRUSTED_HOSTS=["*"]`
+- Set frontend API base to your Render URL, for example: `https://your-backend.onrender.com`.
+- If demo mode is off, configure `CORS_ALLOW_ORIGINS` to your exact Vercel domain and include your backend host in `TRUSTED_HOSTS`.
 
 ## Production Deployment (microservices)
 

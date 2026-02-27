@@ -21,6 +21,21 @@ def configure_logging(log_level: str) -> None:
     root_logger.setLevel(level)
 
 
+def _content_security_policy(path: str, *, enable_docs: bool) -> str:
+    if enable_docs and (path == "/docs" or path == "/redoc" or path == "/openapi.json" or path.startswith("/docs/")):
+        # Swagger/ReDoc require script/style execution; keep this scope limited to docs endpoints.
+        return (
+            "default-src 'self' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' data: https://cdn.jsdelivr.net; "
+            "connect-src 'self' https:; "
+            "frame-ancestors 'none';"
+        )
+    return "default-src 'none'; frame-ancestors 'none';"
+
+
 def add_common_handlers(app: FastAPI, settings: Settings) -> None:
     if settings.trusted_hosts:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
@@ -60,7 +75,10 @@ def add_common_handlers(app: FastAPI, settings: Settings) -> None:
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Cache-Control"] = "no-store"
-        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none';"
+        response.headers["Content-Security-Policy"] = _content_security_policy(
+            request.url.path,
+            enable_docs=settings.enable_docs,
+        )
         return response
 
     @app.exception_handler(RequestValidationError)

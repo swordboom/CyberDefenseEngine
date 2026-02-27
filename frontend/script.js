@@ -318,6 +318,7 @@ form.addEventListener("submit", async (event) => {
       renderDemoMetrics();
       setStatus("Demo analysis complete (local)", "status-ok");
     } catch (error) {
+      const reason = String(error.message || error);
       const startedAt = performance.now();
       const riskScore = scoreLocalRisk(text, url);
       const riskBucket = toRiskBucket(riskScore);
@@ -332,7 +333,7 @@ form.addEventListener("submit", async (event) => {
       };
       const explainData = buildLocalExplanation(text, url, riskScore);
       setResult(analyzeData);
-      explanationNode.textContent = JSON.stringify(explainData, null, 2);
+      explanationNode.textContent = `${JSON.stringify(explainData, null, 2)}\n\nDemo API error: ${reason}`;
       updateDemoMetrics(riskScore, riskBucket);
       renderDemoMetrics();
       setStatus("Demo API failed, switched to local mode", "status-ok");
@@ -377,6 +378,7 @@ refreshMetricsButton.addEventListener("click", async () => {
         return;
       } catch (error) {
         renderDemoMetrics();
+        metricsNode.textContent = `${metricsNode.textContent}\n\nDemo API metrics error: ${String(error.message || error)}`;
         setStatus("Demo API metrics unavailable, showing local metrics", "status-ok");
         return;
       }

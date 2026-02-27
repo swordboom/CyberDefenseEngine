@@ -160,8 +160,11 @@ class Settings(BaseSettings):
     def _apply_demo_mode_defaults(self) -> "Settings":
         if not self.demo_mode:
             return self
+        self.service_mode = "inprocess"
         self.require_api_key = False
         self.force_heuristic = True
+        self.cors_allow_origins = ["*"]
+        self.trusted_hosts = ["*"]
         seed_name = (self.default_institution_name or "demo-university").strip() or "demo-university"
         seeds = dict(self.institution_seed_json)
         seed_value = seeds.get(seed_name, {})
