@@ -1,4 +1,5 @@
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -28,7 +29,7 @@ from .schemas import (
     TokenRequest,
     TokenResponse,
 )
-from .security import hash_identifier
+from .security import TokenError, create_access_token, decode_access_token, hash_identifier
 from .service_client import InternalServiceClient, ServiceCallError
 from .storage import Database
 
@@ -42,6 +43,165 @@ class GatewayContext:
     plan_type: str
     role: str = "student"
     hashed_user_id: str | None = None
+
+
+class _DemoAuthManager:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.default_institution_name = (settings.default_institution_name or "public-dev").strip() or "public-dev"
+        self._contexts_by_api_key: dict[str, AuthContext] = {}
+        self._contexts_by_id: dict[str, AuthContext] = {}
+
+        for institution_name, config in settings.institution_seed_json.items():
+            name = str(institution_name).strip()
+            if not name:
+                continue
+            api_key = str(config.get("api_key", "")).strip() if isinstance(config, dict) else ""
+            if not api_key:
+                continue
+            plan_type = str(config.get("plan_type", "free")).strip() if isinstance(config, dict) else "free"
+            context = self._build_context(name=name, plan_type=plan_type)
+            self._contexts_by_api_key[api_key] = context
+            self._contexts_by_id[context.institution_id] = context
+
+        default_context = self._context_for_name(self.default_institution_name)
+        if default_context is None:
+            default_context = next(iter(self._contexts_by_id.values()), None)
+        if default_context is None:
+            default_context = self._build_context(name=self.default_institution_name, plan_type="free")
+            self._contexts_by_id[default_context.institution_id] = default_context
+        self._default_context = default_context
+        self._contexts_by_id.setdefault(default_context.institution_id, default_context)
+
+    def _build_context(self, *, name: str, plan_type: str) -> AuthContext:
+        institution_name = name.strip()
+        return AuthContext(
+            institution_id=str(uuid.uuid5(uuid.NAMESPACE_DNS, f"cyberdefenseengine:{institution_name}")),
+            institution_name=institution_name,
+            plan_type=(plan_type or "free").strip() or "free",
+            role="student",
+            hashed_user_id=None,
+        )
+
+    def _context_for_name(self, name: str) -> AuthContext | None:
+        institution_name = name.strip()
+        if not institution_name:
+            return None
+        institution_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"cyberdefenseengine:{institution_name}"))
+        return self._contexts_by_id.get(institution_id)
+
+    def bootstrap(self) -> None:
+        return
+
+    def validate_api_key(self, api_key: str | None) -> AuthContext:
+        if not api_key:
+            if self.settings.require_api_key:
+                raise ValueError("Missing API key")
+            return self._default_context
+
+        institution = self._contexts_by_api_key.get(api_key.strip())
+        if institution is None:
+            raise ValueError("Invalid API key")
+        return institution
+
+    def issue_token(self, *, api_key: str | None, role: str, hashed_user_id: str | None) -> TokenResponse:
+        context = self.validate_api_key(api_key)
+        normalized_role = role if role in {"student", "admin"} else "student"
+        token = create_access_token(
+            secret=self.settings.jwt_secret,
+            algorithm=self.settings.jwt_algorithm,
+            institution_id=context.institution_id,
+            role=normalized_role,
+            hashed_user_id=hashed_user_id,
+            expires_minutes=self.settings.jwt_exp_minutes,
+        )
+        return TokenResponse(
+            access_token=token,
+            expires_in=self.settings.jwt_exp_minutes * 60,
+            institution_id=context.institution_id,
+            role=normalized_role,  # type: ignore[arg-type]
+        )
+
+    def validate_token(self, token: str) -> AuthContext:
+        payload = decode_access_token(
+            token=token,
+            secret=self.settings.jwt_secret,
+            algorithm=self.settings.jwt_algorithm,
+        )
+        institution_id = str(payload["sub"])
+        role = str(payload["role"])
+        hashed_user_id = payload.get("hashed_user_id")
+        institution = self._contexts_by_id.get(institution_id)
+        if institution is None:
+            raise TokenError("Institution in token no longer exists")
+        return AuthContext(
+            institution_id=institution.institution_id,
+            institution_name=institution.institution_name,
+            plan_type=institution.plan_type,
+            role=role,  # type: ignore[arg-type]
+            hashed_user_id=str(hashed_user_id).strip() if hashed_user_id else None,
+        )
+
+    def normalize_hashed_user_id(self, raw_value: str | None) -> str | None:
+        if not raw_value:
+            return None
+        return hash_identifier(raw_value, self.settings.hash_salt)
+
+
+class _InMemoryMetricsManager:
+    def __init__(self):
+        self._store: dict[str, dict[str, object]] = {}
+
+    def bootstrap(self) -> None:
+        return
+
+    def record_event(
+        self,
+        *,
+        institution_id: str,
+        risk_score: float,
+        risk_bucket: str,
+        hashed_user_id: str | None,
+    ) -> None:
+        del hashed_user_id
+        if risk_bucket not in {"low", "medium", "high", "critical"}:
+            risk_bucket = "low"
+        entry = self._store.setdefault(
+            institution_id,
+            {
+                "total_requests": 0,
+                "risk_sum": 0.0,
+                "buckets": {"low": 0, "medium": 0, "high": 0, "critical": 0},
+            },
+        )
+        entry["total_requests"] = int(entry["total_requests"]) + 1
+        entry["risk_sum"] = float(entry["risk_sum"]) + float(risk_score)
+        buckets = entry["buckets"]
+        if isinstance(buckets, dict):
+            buckets[risk_bucket] = int(buckets.get(risk_bucket, 0)) + 1
+
+    def get_summary(self, *, institution_id: str, since_hours: int = 24 * 7) -> MetricsSummaryResponse:
+        del since_hours
+        entry = self._store.get(institution_id)
+        if entry is None:
+            buckets = {"low": 0, "medium": 0, "high": 0, "critical": 0}
+            total_requests = 0
+            risk_sum = 0.0
+        else:
+            buckets = dict(entry.get("buckets", {"low": 0, "medium": 0, "high": 0, "critical": 0}))
+            total_requests = int(entry.get("total_requests", 0))
+            risk_sum = float(entry.get("risk_sum", 0.0))
+
+        high_risk_total = int(buckets.get("high", 0)) + int(buckets.get("critical", 0))
+        avg_risk = round((risk_sum / total_requests), 4) if total_requests else 0.0
+        high_risk_rate = round((high_risk_total / total_requests), 4) if total_requests else 0.0
+        return MetricsSummaryResponse(
+            institution_id=institution_id,
+            total_requests=total_requests,
+            avg_risk=avg_risk,
+            high_risk_rate=high_risk_rate,
+            buckets={bucket: int(value) for bucket, value in buckets.items()},
+        )
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
@@ -70,10 +230,19 @@ def create_gateway_app(config: Settings | None = None) -> FastAPI:
         app.state.rate_limiter = RateLimiter(limit_per_minute=settings.rate_limit_per_minute, redis_client=redis_client)
 
         if settings.service_mode == "inprocess":
-            db = Database(settings.database_url)
-            auth_manager = AuthManager(settings=settings, db=db)
+            has_database = bool(settings.database_url.strip())
+            if has_database:
+                db = Database(settings.database_url)
+                auth_manager = AuthManager(settings=settings, db=db)
+                metrics_manager = MetricsManager(settings=settings, db=db)
+            elif settings.demo_mode:
+                logger.info("Demo mode with empty DATABASE_URL detected; using in-memory auth and metrics stores")
+                auth_manager = _DemoAuthManager(settings=settings)
+                metrics_manager = _InMemoryMetricsManager()
+            else:
+                raise RuntimeError("DATABASE_URL must be set when service_mode=inprocess and demo_mode=false")
+
             auth_manager.bootstrap()
-            metrics_manager = MetricsManager(settings=settings, db=db)
             metrics_manager.bootstrap()
             app.state.auth_manager = auth_manager
             app.state.inference_manager = InferenceManager(settings)

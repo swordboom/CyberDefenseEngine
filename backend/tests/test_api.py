@@ -142,6 +142,19 @@ def test_demo_mode_metrics_without_admin_token(tmp_path):
     assert metrics.status_code == 200
 
 
+def test_demo_mode_without_database_url_uses_in_memory_auth_and_metrics(tmp_path):
+    with _make_client(tmp_path, demo_mode=True, database_url="", require_api_key=False) as client:
+        token_response = client.post("/auth/token", json={"role": "admin"})
+        analyze = client.post("/analyze", json={"text": "verify now", "url": "http://example.com/login"})
+        metrics = client.get("/metrics")
+
+    assert token_response.status_code == 200
+    assert analyze.status_code == 200
+    assert metrics.status_code == 200
+    payload = metrics.json()
+    assert payload["total_requests"] >= 1
+
+
 def test_docs_endpoint_uses_docs_csp(tmp_path):
     with _make_client(tmp_path) as client:
         docs = client.get("/docs")
