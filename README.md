@@ -1,4 +1,4 @@
-# CyberDefenseEngine
+# CyberDefenseEngine 
 
 CyberDefenseEngine is now structured as a privacy-first microservice platform for phishing detection:
 
